@@ -26,6 +26,8 @@ class Ping(object):
         self.icon.set_tooltip("Waiting for data...")
         self.icon.set_visible(True)
         self.tick_interval = 5000 #number of ms between each poll
+        self.down_timestamp = time.time()
+        self.last_down_duration = 0 #secs
 
     def test_connection(self):
         p = subprocess.Popen(
@@ -33,7 +35,7 @@ class Ping(object):
             stdout=subprocess.PIPE)
         stdout = p.communicate()[0]
         if not p.returncode:
-            ptime = re.findall(r' (time=[\d.]+ ms)', stdout)
+            ptime = re.findall(r' (ping=[\d.]+ ms)', stdout)
             if ptime:
                 return ptime[0]
         return False
@@ -51,13 +53,29 @@ class Ping(object):
         """This method is called everytime a tick interval occurs"""
         res = self.test_connection()
         if res:
+            # if moving from DIS to CONNECTED, store how long connection was down
+            if self.state == self.DISCONNECTED:
+                self.last_down_duration = time.time()-self.down_timestamp
+
             self.state = self.CONNECTED
+
+            # don't show downtime length if it was more than 5 mins ago
+            if time.time()-self.down_timestamp > 5*60:
+                self.down_timestamp = 0
+
+            if self.last_down_duration:
+                res += ' (last downtime lasted=%.0f secs)' % self.last_down_duration
             self.icon.set_tooltip(res)
             print res
         else:
+            # if moving from CONN to DISCONNECTED, store timestamp of loss 
+            if self.state == self.CONNECTED:
+                self.down_timestamp = time.time()
+
             self.state = self.DISCONNECTED
+
             print 'Net Not Found'
-            self.icon.set_tooltip('Disconnected')
+            self.icon.set_tooltip('Lost %.0f secs ago' % (time.time()-self.down_timestamp))
 
         self.update_icon()
         gobject.timeout_add(self.tick_interval, self.update)
