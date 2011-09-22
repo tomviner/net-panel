@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import re
 import subprocess
 import time
@@ -9,6 +10,20 @@ import gtk
 import gobject
 pygtk.require('2.0')
 gtk.gdk.threads_init()
+
+
+IWCONFIG_PATH = '/sbin/iwconfig'
+
+
+def matching_wifi_network(good_ssids=()):
+    try:
+        p = subprocess.Popen(IWCONFIG_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError, e:
+        print "Problem calling iwconfig at %s: %r" % (IWCONFIG_PATH, e)
+        return False
+    comms = p.communicate()
+    conn_data = comms[0]
+    return any(('ESSID:"%s"' % ssid) in conn_data for ssid in good_ssids)
 
 
 class Ping(object):
@@ -87,8 +102,13 @@ class Ping(object):
         gtk.main()
 
 
-# If the program is run directly or passed as an argument to the python
-# interpreter then create a Ping instance and show it
 if __name__ == "__main__":
+    # TODO cope with moving between wifi networks while already running
+    if sys.argv[1:]:
+        good_ssids = sys.argv[1:]
+        if not matching_wifi_network(good_ssids):
+            print "Not on a chosen wifi network so exiting"
+            sys.exit()
+
     app = Ping()
     app.main()
