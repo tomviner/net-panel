@@ -50,7 +50,7 @@ class Ping(object):
             stdout=subprocess.PIPE)
         stdout = p.communicate()[0]
         if not p.returncode:
-            ptime = re.findall(r' (ping=[\d.]+ ms)', stdout)
+            ptime = re.findall(r' (time=[\d.]+ ms)', stdout)
             if ptime:
                 return ptime[0]
         return False
