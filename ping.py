@@ -52,7 +52,7 @@ class Ping(object):
         if not p.returncode:
             ptime = re.findall(r' (time=[\d.]+ ms)', stdout)
             if ptime:
-                return ptime[0]
+                return ptime[0].replace('time', 'ping')
         return False
 
     def update_icon(self):
