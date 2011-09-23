@@ -29,7 +29,7 @@ def matching_wifi_network(good_ssids=()):
 class Ping(object):
     UNKNOWN, DISCONNECTED, CONNECTED = range(3)
     icon_filename = {
-        UNKNOWN: 'disconnected.png',
+        UNKNOWN: 'unknown.png',
         DISCONNECTED: 'disconnected.png',
         CONNECTED: 'connected.png',
     }
