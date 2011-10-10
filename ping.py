@@ -104,6 +104,8 @@ class Ping(object):
 
 if __name__ == "__main__":
     # TODO cope with moving between wifi networks while already running
+    # TODO implement exponential backoff for states: conn, disconn, bad ssid.
+    # TODO add a click handler to allow quiting
     if sys.argv[1:]:
         good_ssids = sys.argv[1:]
         if not matching_wifi_network(good_ssids):
