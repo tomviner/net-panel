@@ -34,7 +34,28 @@ class Ping(object):
         CONNECTED: 'connected.png',
     }
 
-    def __init__(self):
+    @staticmethod
+    def backoff(t, direction, factor=2, mn=5*1000, mx=5*60*1000):
+        """
+        >>> p = Ping()
+        >>> p.backoff(10*1000, 1)
+        20000
+        >>> p.backoff(10*1000, -1)
+        5000
+        >>> p.backoff(7*1000, -1)
+        5000
+        >>> p.backoff(3*60*1000, 1)
+        300000
+        """
+        def within(x, mn, mx):
+            return max(min(x, mx), mn)
+        assert direction in (-1, 1), "Please suply a direction either -1 or 1, you supplied %s" % direction
+        new_t = t * factor ** direction
+        return int(within(new_t, mn, mx))
+
+
+    def __init__(self, good_ssids=()):
+        self.good_ssids = good_ssids
         self.location = os.path.dirname(os.path.realpath(__file__))
         self.state = self.UNKNOWN
         self.update_icon()
@@ -103,14 +124,14 @@ class Ping(object):
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ['test']:
+        import doctest
+        doctest.testmod()
+        sys.exit()
     # TODO cope with moving between wifi networks while already running
     # TODO implement exponential backoff for states: conn, disconn, bad ssid.
     # TODO add a click handler to allow quiting
-    if sys.argv[1:]:
-        good_ssids = sys.argv[1:]
-        if not matching_wifi_network(good_ssids):
-            print "Not on a chosen wifi network so exiting"
-            sys.exit()
+    good_ssids = sys.argv[1:]
 
-    app = Ping()
+    app = Ping(good_ssids)
     app.main()
