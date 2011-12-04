@@ -59,11 +59,16 @@ class Ping(object):
         self.location = os.path.dirname(os.path.realpath(__file__))
         self.state = self.UNKNOWN
         self.update_icon()
+        self.icon.connect('activate', self.icon_click)
         self.icon.set_tooltip("Waiting for data...")
         self.icon.set_visible(True)
         self.tick_interval = 5000 #number of ms between each poll
         self.down_timestamp = time.time()
         self.last_down_duration = 0 #secs
+
+    def icon_click(self, gtk_object):
+        print 'quit'
+        gtk.main_quit()
 
     def test_connection(self):
         p = subprocess.Popen(
@@ -130,7 +135,6 @@ if __name__ == "__main__":
         sys.exit()
     # TODO cope with moving between wifi networks while already running
     # TODO implement exponential backoff for states: conn, disconn, bad ssid.
-    # TODO add a click handler to allow quiting
     good_ssids = sys.argv[1:]
 
     app = Ping(good_ssids)
