@@ -37,6 +37,7 @@ class Ping(object):
     @staticmethod
     def backoff(t, direction, factor=2, mn=5*1000, mx=5*60*1000):
         """
+        Adjust update time expotentially between 5 seconds and 5 minutes
         >>> p = Ping()
         >>> p.backoff(10*1000, 1)
         20000
@@ -91,7 +92,7 @@ class Ping(object):
             self.icon = gtk.status_icon_new_from_file(path)
 
     def update(self):
-        """This method is called everytime a tick interval occurs"""
+        """ This method is called everytime a tick interval occurs """
         res = self.test_connection()
         if res:
             # if moving from DIS to CONNECTED, store how long connection was down
@@ -119,7 +120,24 @@ class Ping(object):
             self.icon.set_tooltip('Lost %.0f secs ago' % (time.time()-self.down_timestamp))
 
         self.update_icon()
+        self.adjust_tick_interval()
         gobject.timeout_add(self.tick_interval, self.update)
+
+    def adjust_tick_interval(self):
+        matching_network = matching_wifi_network(self.good_ssids)
+        state = self.state
+        direction = None
+        if not matching_network:
+            print 'not matching network'
+            direction = 1
+        else:
+            print 'matching network'
+            direction = -1
+        if direction:
+            print 'update', self.tick_interval,
+            tick = self.backoff(self.tick_interval, direction)
+            self.tick_interval = tick
+            print '-->', tick
 
     def main(self):
         # All PyGTK applications must have a gtk.main(). Control ends here
