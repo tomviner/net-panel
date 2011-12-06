@@ -72,6 +72,9 @@ class Ping(object):
         gtk.main_quit()
 
     def test_connection(self):
+        """ Issue a single ping to Google's fast DNS server
+            Return either a string with the time if found or False
+        """
         p = subprocess.Popen(
             ('ping', '-c 1', '-n', '8.8.8.8'),
             stdout=subprocess.PIPE)
@@ -83,6 +86,9 @@ class Ping(object):
         return False
 
     def update_icon(self):
+        """ Initially set self.icon and then update with the
+            icon for the current state
+        """
         fn = self.icon_filename[self.state]
         path = os.path.join(self.location, fn)
         assert os.path.exists(path), 'File not found: %s' % path
@@ -92,7 +98,9 @@ class Ping(object):
             self.icon = gtk.status_icon_new_from_file(path)
 
     def update(self):
-        """ This method is called everytime a tick interval occurs """
+        """
+        This method is called everytime a tick interval occurs
+        """
         res = self.test_connection()
         if res:
             # if moving from DIS to CONNECTED, store how long connection was down
@@ -124,6 +132,10 @@ class Ping(object):
         gobject.timeout_add(self.tick_interval, self.update)
 
     def adjust_tick_interval(self):
+        """
+        Check whether we're on a matching network and the current state
+        and possibly apply exponential backoff to the interval time
+        """
         matching_network = matching_wifi_network(self.good_ssids)
         state = self.state
         direction = None
@@ -140,8 +152,10 @@ class Ping(object):
             print '-->', tick
 
     def main(self):
-        # All PyGTK applications must have a gtk.main(). Control ends here
-        # and waits for an event to occur (like a key press or mouse event).
+        """
+        All PyGTK applications must have a gtk.main(). Control ends here
+        and waits for an event to occur (like a key press or mouse event).
+        """
         gobject.timeout_add(self.tick_interval, self.update)
         gtk.main()
 
@@ -151,7 +165,6 @@ if __name__ == "__main__":
         import doctest
         doctest.testmod()
         sys.exit()
-    # TODO cope with moving between wifi networks while already running
     # TODO implement exponential backoff for states: conn, disconn, bad ssid.
     good_ssids = sys.argv[1:]
 
