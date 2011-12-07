@@ -27,12 +27,26 @@ def matching_wifi_network(good_ssids=()):
 
 
 class Ping(object):
+    DEFAULT_INTERVAL = 5000
+
     UNKNOWN, DISCONNECTED, CONNECTED = range(3)
     icon_filename = {
         UNKNOWN: 'unknown.png',
         DISCONNECTED: 'disconnected.png',
         CONNECTED: 'connected.png',
     }
+
+    def __init__(self, good_ssids=()):
+        self.good_ssids = good_ssids
+        self.location = os.path.dirname(os.path.realpath(__file__))
+        self.state = self.UNKNOWN
+        self.update_icon()
+        self.icon.connect('activate', self.icon_click)
+        self.icon.set_tooltip("Waiting for data...")
+        self.icon.set_visible(True)
+        self.tick_interval = self.DEFAULT_INTERVAL #number of ms between each poll
+        self.down_timestamp = time.time()
+        self.last_down_duration = 0 #secs
 
     @staticmethod
     def backoff(t, direction, factor=2, mn=5*1000, mx=5*60*1000):
@@ -54,20 +68,10 @@ class Ping(object):
         new_t = t * factor ** direction
         return int(within(new_t, mn, mx))
 
-
-    def __init__(self, good_ssids=()):
-        self.good_ssids = good_ssids
-        self.location = os.path.dirname(os.path.realpath(__file__))
-        self.state = self.UNKNOWN
-        self.update_icon()
-        self.icon.connect('activate', self.icon_click)
-        self.icon.set_tooltip("Waiting for data...")
-        self.icon.set_visible(True)
-        self.tick_interval = 5000 #number of ms between each poll
-        self.down_timestamp = time.time()
-        self.last_down_duration = 0 #secs
-
     def icon_click(self, gtk_object):
+        """
+        Handle a click
+        """
         print 'quit'
         gtk.main_quit()
 
@@ -102,21 +106,21 @@ class Ping(object):
         This method is called everytime a tick interval occurs
         """
         res = self.test_connection()
+        tooltip = []
         if res:
             # if moving from DIS to CONNECTED, store how long connection was down
             if self.state == self.DISCONNECTED:
                 self.last_down_duration = time.time()-self.down_timestamp
 
             self.state = self.CONNECTED
+            tooltip.append(res)
 
             # don't show downtime length if it was more than 5 mins ago
             if time.time()-self.down_timestamp > 5*60:
                 self.down_timestamp = 0
 
             if self.last_down_duration:
-                res += ' (last downtime lasted=%.0f secs)' % self.last_down_duration
-            self.icon.set_tooltip(res)
-            print res
+                tooltip.append('(last downtime lasted=%.0f secs)' % self.last_down_duration)
         else:
             # if moving from CONN to DISCONNECTED, store timestamp of loss 
             if self.state == self.CONNECTED:
@@ -130,6 +134,22 @@ class Ping(object):
         self.update_icon()
         self.adjust_tick_interval()
         gobject.timeout_add(self.tick_interval, self.update)
+        if self.tick_interval != self.DEFAULT_INTERVAL:
+            tooltip.append('Interval: %s' % self.pretty_interval)
+
+        tooltip = ' '.join(tooltip)
+        print tooltip
+        self.icon.set_tooltip(tooltip)
+
+    @property
+    def pretty_interval(self):
+        t = self.tick_interval / 1000.0
+        unit = 'secs'
+        if t >= 60:
+            t /= 60.0
+            unit = 'mins'
+        return '%3.0f %s' % (float(t), unit)
+
 
     def adjust_tick_interval(self):
         """
@@ -165,6 +185,7 @@ if __name__ == "__main__":
         import doctest
         doctest.testmod()
         sys.exit()
+    # TODO decouple the interval for checking ping time and network name
     # TODO implement exponential backoff for states: conn, disconn, bad ssid.
     good_ssids = sys.argv[1:]
 
